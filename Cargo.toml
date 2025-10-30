@@ -1,7 +1,7 @@
 # Workspace configuration
 [workspace]
 resolver = "2"
-members = ["fresh", "fresh-macros", "examples"]
+members = ["fresh", "fresh-macros", "examples", "fresh-test"]
 
 # Package metadata
 [workspace.package]

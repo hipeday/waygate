@@ -27,6 +27,18 @@ pub enum Error {
     // URL 解析错误，附带源错误
     #[error("Invalid URL: {0}")]
     UrlParse(#[from] url::ParseError),
+
+    // 请求头错误，附带源错误
+    #[error("Invalid header: {0}")]
+    HeaderName(#[from] reqwest::header::InvalidHeaderName),
+
+    // 请求头值错误，附带源错误
+    #[error("Invalid header value: {0}")]
+    HeaderValue(#[from] reqwest::header::InvalidHeaderValue),
+
+    // 非法参数错误，附带描述信息
+    #[error("Invalid argument: {0}")]
+    InvalidArgument(String),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

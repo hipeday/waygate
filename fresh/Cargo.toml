@@ -8,3 +8,8 @@ thiserror.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
 url.workspace = true
+fresh-macros = { workspace = true, optional = true }
+
+[features]
+default = ["macros"]
+macros = ["dep:fresh-macros"]

@@ -1,5 +1,5 @@
-use fresh_macros::fresh;
 use serde::{Deserialize, Serialize};
+use fresh::fresh;
 
 #[derive(Debug, Serialize)]
 struct SearchQuery {
@@ -19,7 +19,7 @@ struct HttpBinGet {
     headers: serde_json::Value,
 }
 
-#[fresh(base_url = "https://httpbin.org")]
+#[fresh(endpoint = "https://httpbin.org", headers(user_agent = "fresh-client/0.1hhh", x_token = "这是token"))]
 trait Api {
     #[get("/get")]
     async fn search(&self, #[query] q: SearchQuery) -> fresh::Result<HttpBinGet>;

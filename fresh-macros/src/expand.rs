@@ -10,15 +10,18 @@
 use quote::{format_ident, quote};
 use syn::{FnArg, ItemTrait, TraitItem};
 
-use crate::attr::parse_base_url;
 use crate::method::parse_method_attr;
-use crate::param::{parse_param_attrs, ParamKind};
+use crate::param::{ParamKind, parse_param_attrs};
+use crate::parser::Parser;
 use crate::util::{extract_ok_type, http_method_tokens};
 
 /// 使用 proc_macro2::TokenStream，入口在 lib.rs 里做类型转换
-pub fn expand_fresh(attr: proc_macro2::TokenStream, item: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
-    // 解析 trait 级参数（base_url）
-    let base_url = match parse_base_url(&attr) {
+pub fn expand_fresh(
+    attr: proc_macro2::TokenStream,
+    item: proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
+    // 解析 trait 级参数
+    let fresh_attributes = match crate::parser::FreshAttributeParser::parse(&attr) {
         Ok(v) => v,
         Err(e) => return e.to_compile_error(),
     };
@@ -28,6 +31,7 @@ pub fn expand_fresh(attr: proc_macro2::TokenStream, item: proc_macro2::TokenStre
         Ok(x) => x,
         Err(e) => return e.to_compile_error(),
     };
+
     let trait_ident = trait_item.ident.clone();
     let client_ident = format_ident!("{}Client", trait_ident);
 
@@ -45,15 +49,40 @@ pub fn expand_fresh(attr: proc_macro2::TokenStream, item: proc_macro2::TokenStre
 
     // 构造函数
     let mut ctor_extra = quote! {
-        pub fn with_base_url(url: &str) -> ::fresh::Result<Self> {
-            Ok(Self { core: ::fresh::HttpClient::new(url)? })
+        pub fn with_endpoint(endpoint: &str) -> ::fresh::Result<Self> {
+            Ok(Self { core: ::fresh::HttpClient::with_endpoint(endpoint)? })
         }
     };
-    if let Some(url) = base_url {
+
+    let headers_pairs = fresh_attributes
+        .headers
+        .into_iter()
+        .map(|(k, v)| {
+            // "_" -> "-"
+            let k = k.replace('_', "-");
+            let k = syn::LitStr::new(&k, proc_macro2::Span::call_site());
+            let v = syn::LitStr::new(&v, proc_macro2::Span::call_site());
+            quote! { (#k, #v) }
+        })
+        .collect::<Vec<_>>();
+
+    // 2) 只有在非空时才生成 .headers(vec![...])
+    let headers_stmt = if headers_pairs.is_empty() {
+        quote! {}
+    } else {
+        quote! { .headers(vec![#(#headers_pairs),*]) }
+    };
+
+    if let Some(endpoint) = fresh_attributes.endpoint {
         ctor_extra = quote! {
             #ctor_extra
             pub fn new_default() -> ::fresh::Result<Self> {
-                Ok(Self { core: ::fresh::HttpClient::new(#url)? })
+                let option = ::fresh::HttpClientOption::builder()
+                    .endpoint(#endpoint)
+                    #headers_stmt
+                    .build()?;
+
+                Ok(Self { core: ::fresh::HttpClient::new(option)? })
             }
         };
     }
@@ -62,7 +91,7 @@ pub fn expand_fresh(attr: proc_macro2::TokenStream, item: proc_macro2::TokenStre
         #trait_item
 
         pub struct #client_ident {
-            core: ::fresh::HttpClient,
+            pub core: ::fresh::HttpClient,
         }
 
         impl #client_ident {
@@ -89,18 +118,27 @@ struct MethodMeta {
 fn collect_methods(trait_item: &ItemTrait) -> Vec<MethodMeta> {
     let mut out = Vec::new();
     for it in &trait_item.items {
-        let TraitItem::Fn(m) = it else { continue; };
+        let TraitItem::Fn(m) = it else {
+            continue;
+        };
         let sig_ident = m.sig.ident.clone();
 
         let (http_method, path_lit) =
-            parse_method_attr(&m.attrs).unwrap_or_else(|| panic!("方法 {} 缺少 #[get|post|put|delete|patch(\"/path\")] 标注", sig_ident));
+            // 英文异常提示
+            parse_method_attr(&m.attrs).unwrap_or_else(|| panic!("Method {} is missing #[get|post|put|delete|patch(\"/path\")] attribute", sig_ident));
 
         let ok_ty = extract_ok_type(&m.sig.output)
-            .unwrap_or_else(|| panic!("方法 {} 返回类型必须是 Result<T, E>", sig_ident));
+            .unwrap_or_else(|| panic!("Method {} must have return type Result<T, E>", sig_ident));
 
         let params = parse_param_attrs(&m.sig.inputs);
 
-        out.push(MethodMeta { sig_ident, ok_ty, http_method, path_lit, params });
+        out.push(MethodMeta {
+            sig_ident,
+            ok_ty,
+            http_method,
+            path_lit,
+            params,
+        });
     }
     out
 }
@@ -110,7 +148,9 @@ fn strip_custom_attrs_in_trait(trait_item: &mut ItemTrait) {
         if let TraitItem::Fn(m) = item {
             // 方法级：去掉 get/post/put/delete/patch
             m.attrs.retain(|a| {
-                let Some(id) = a.path().get_ident() else { return true; };
+                let Some(id) = a.path().get_ident() else {
+                    return true;
+                };
                 let n = id.to_string();
                 !matches!(n.as_str(), "get" | "post" | "put" | "delete" | "patch")
             });
@@ -118,7 +158,9 @@ fn strip_custom_attrs_in_trait(trait_item: &mut ItemTrait) {
             for input in &mut m.sig.inputs {
                 if let FnArg::Typed(pt) = input {
                     pt.attrs.retain(|a| {
-                        let Some(id) = a.path().get_ident() else { return true; };
+                        let Some(id) = a.path().get_ident() else {
+                            return true;
+                        };
                         let n = id.to_string();
                         !matches!(n.as_str(), "path" | "query" | "json" | "header")
                     });
@@ -129,8 +171,8 @@ fn strip_custom_attrs_in_trait(trait_item: &mut ItemTrait) {
 }
 
 fn expand_method_impl(m: &MethodMeta) -> proc_macro2::TokenStream {
-    let ident = &m.sig_ident;                  // Ident 实现 ToTokens，可直接插值
-    let ok_ty = &m.ok_ty;                      // 已是 TokenStream，可直接插值
+    let ident = &m.sig_ident; // Ident 实现 ToTokens，可以直接插值
+    let ok_ty = &m.ok_ty; // 已是 TokenStream，可以直接插值
     let method_tokens = http_method_tokens(&m.http_method);
 
     // impl 参数签名（移除参数属性）
@@ -143,7 +185,7 @@ fn expand_method_impl(m: &MethodMeta) -> proc_macro2::TokenStream {
     }
 
     // path 占位符替换
-    let path_lit = &m.path_lit;                // 先绑定要插值的字段
+    let path_lit = &m.path_lit; // 先绑定要插值的字段
     let mut path_build = quote! { let mut __path = #path_lit.to_string(); };
     for p in &m.params {
         if matches!(p.kind, ParamKind::Path) {
@@ -158,7 +200,7 @@ fn expand_method_impl(m: &MethodMeta) -> proc_macro2::TokenStream {
 
     // 构建请求（依次链式追加）
     let mut req_chain = quote! {
-        let __url = self.core.base_url().join(&__path)?;
+        let __url = self.core.endpoint().join(&__path)?;
         let __req = self.core.client().request(#method_tokens, __url)
     };
 

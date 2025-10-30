@@ -240,7 +240,6 @@ name = "examples"
 version = "0.1.1"
 dependencies = [
  "fresh",
- "fresh-macros",
  "serde",
  "serde_json",
  "tokio",
@@ -302,6 +301,7 @@ dependencies = [
 name = "fresh"
 version = "0.1.0"
 dependencies = [
+ "fresh-macros",
  "reqwest",
  "serde_json",
  "thiserror",
@@ -315,6 +315,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "fresh-test"
+version = "0.1.0"
+dependencies = [
+ "fresh",
+ "fresh-macros",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

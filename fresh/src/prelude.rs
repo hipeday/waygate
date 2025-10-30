@@ -3,7 +3,7 @@
 
 pub use crate::{
     error::{Error, Result},
-    client::HttpClient
+    client::{HttpClient, HttpClientOption, HttpClientOptionBuilder}
 };
 
 // 若有可选特性，可按需导出
