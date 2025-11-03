@@ -8,8 +8,13 @@ thiserror.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
 url.workspace = true
+derive_builder.workspace = true
+
+# feature-dependent dependencies
 fresh-macros = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
 
 [features]
 default = ["macros"]
 macros = ["dep:fresh-macros"]
+log = ["tracing"]

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use fresh::fresh;
+use fresh::request;
 
 #[derive(Debug, Serialize)]
 struct SearchQuery {
@@ -19,15 +19,21 @@ struct HttpBinGet {
     headers: serde_json::Value,
 }
 
-#[fresh(endpoint = "https://httpbin.org", headers(user_agent = "fresh-client/0.1hhh", x_token = "这是token"))]
+#[request(
+    endpoint = "https://httpbin.org",
+    headers(foo = "bar", user_agent = "fresh-test"),
+    timeout = 10000,
+    connect_timeout = 11000,
+    read_timeout = 12000,
+)]
 trait Api {
-    #[get("/get")]
+    #[get(path = "/get")]
     async fn search(&self, #[query] q: SearchQuery) -> fresh::Result<HttpBinGet>;
 
-    #[post("/post")]
+    #[post(path = "/post")]
     async fn create_user(&self, #[json] body: CreateUser) -> fresh::Result<serde_json::Value>;
 
-    #[get("/anything/{id}")]
+    #[get(path = "/anything/{id}")]
     async fn anything(
         &self,
         #[path] id: u64,
@@ -37,11 +43,7 @@ trait Api {
 
 #[tokio::main]
 async fn main() -> fresh::Result<()> {
-    // 方式一：使用 trait 上的 base_url（宏会生成 new_default）
     let api = ApiClient::new_default()?;
-
-    // 方式二：显式传入 base_url
-    // let api = ApiClient::with_base_url("https://httpbin.org")?;
 
     let out = api
         .search(SearchQuery { q: "rust".into(), page: 1 })

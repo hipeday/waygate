@@ -20,15 +20,3 @@ pub fn extract_ok_type(ret: &ReturnType) -> Option<proc_macro2::TokenStream> {
     }
     None
 }
-
-/// 将方法字符串转换为 `reqwest::Method` 代码片段。
-pub fn http_method_tokens(m: &str) -> proc_macro2::TokenStream {
-    match m {
-        "get" => quote::quote! { ::fresh::reqwest::Method::GET },
-        "post" => quote::quote! { ::fresh::reqwest::Method::POST },
-        "put" => quote::quote! { ::fresh::reqwest::Method::PUT },
-        "delete" => quote::quote! { ::fresh::reqwest::Method::DELETE },
-        "patch" => quote::quote! { ::fresh::reqwest::Method::PATCH },
-        _ => quote::quote! { ::fresh::reqwest::Method::GET },
-    }
-}

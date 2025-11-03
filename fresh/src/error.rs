@@ -39,6 +39,11 @@ pub enum Error {
     // 非法参数错误，附带描述信息
     #[error("Invalid argument: {0}")]
     InvalidArgument(String),
+
+    // Format 错误，附带描述信息
+    #[error("Format error: {0}")]
+    FormatError(String),
+
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

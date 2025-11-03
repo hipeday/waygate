@@ -67,3 +67,20 @@ version = "1.0.103"
 # Quote crate for quoting Rust code (used in fresh-macros)
 [workspace.dependencies.quote]
 version = "1.0.41"
+
+# Derive-Builder for builder pattern
+[workspace.dependencies.derive_builder]
+version = "0.20.2"
+
+# Tracing for logging and diagnostics
+[workspace.dependencies.tracing]
+version = "0.1.41"
+[workspace.dependencies.tracing-subscriber]
+version = "0.3.20"
+
+[workspace.dependencies.strum]
+version = "0.27.2"
+features = ["derive"]
+
+[workspace.dependencies.strum_macros]
+version = "0.27.2"

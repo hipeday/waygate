@@ -6,6 +6,10 @@ pub mod prelude;
 pub use prelude::*;
 
 pub use reqwest; // 供宏生成代码使用
+pub use url; // 宏解析 endpoint 时使用
 
 #[cfg(feature = "macros")]
-pub use fresh_macros::fresh;
+pub use fresh_macros::request;
+
+#[cfg(feature = "tracing")]
+pub use tracing;

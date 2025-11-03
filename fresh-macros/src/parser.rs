@@ -2,7 +2,7 @@
 
 mod fresh_attribute;
 
-pub use fresh_attribute::{FreshAttributeParser};
+pub use fresh_attribute::{FreshAttributeParser, MethodMetaParser, MethodMeta, ParamKind};
 
 /// 解析器 trait
 pub trait Parser<I> {

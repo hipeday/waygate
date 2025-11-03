@@ -1,3 +1,4 @@
+use std::time::Duration;
 use fresh_test::{
     macros::{FreshAttribute, FreshAttributeClient},
     SearchQuery,
@@ -7,7 +8,8 @@ use fresh_test::{
 fn test_fresh_attribute_parsing() {
     let client = FreshAttributeClient::new_default().unwrap();
     let endpoint = client.core.endpoint();
-    let headers = client.core.options().headers();
+    let options = client.core.options();
+    let headers = &options.headers;
     for (key, value) in headers {
         match key.as_str() {
             "foo" => assert_eq!(value, "bar"),
@@ -16,7 +18,11 @@ fn test_fresh_attribute_parsing() {
             _ => panic!("Unexpected header: {}: {}", key, value),
         }
     }
+    println!("options.connect_timeout(): {:?}", options.connect_timeout);
     assert_eq!(endpoint.as_str(), "https://httpbin.org/");
+    assert_eq!(options.timeout, Duration::from_millis(10000));
+    assert_eq!(options.connect_timeout, Duration::from_millis(11000)); // 默认值
+    assert_eq!(options.read_timeout, Duration::from_millis(12000)); // 默认值
 }
 
 #[tokio::test]
