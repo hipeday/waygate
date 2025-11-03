@@ -30,7 +30,7 @@ serde_json = "1"
 fresh = { version = "0.1.0", default-features = false, features = ["macros"] }
 ```
 
-在本仓库中，`fresh` 已对宏进行根导出，可使用 `fresh::fresh`。
+在本仓库中，`fresh` 已对宏进行根导出，可使用 `fresh::request`。
 
 ## 快速开始
 
@@ -51,13 +51,23 @@ struct HttpBinGet {
     headers: serde_json::Value,
 }
 
-#[fresh(
+#[request(
     endpoint = "https://httpbin.org",
     // headers 的键名支持下划线写法，宏会规范为短横线小写（user_agent -> user-agent）
-    headers(user_agent = "fresh-client/0.1", x_token = "demo-token")
+    headers(foo = "bar", user_agent = "fresh-test"),
+    timeout = 10000,
+    connect_timeout = 11000,
+    read_timeout = 12000,
 )]
 trait Api {
-    #[get("/get")]
+    #[get(
+        path = "/get",
+        // headers 的键名支持下划线写法，宏会规范为短横线小写（user_agent -> user-agent）
+        headers(user_agent = "fresh-client/0.1", x_token = "demo-token"), // 方法级别 headers 会覆盖 trait 级别同名请求头对应的值
+        timeout = 10000, // 函数级别超时时间会覆盖 trait 级别
+        connect_timeout = 11000, // 函数级别超时时间会覆盖 trait 级别
+        read_timeout = 12000,  // 函数级别超时时间会覆盖 trait 级别
+    )]
     async fn search(&self, #[query] q: SearchQuery) -> fresh::Result<HttpBinGet>;
 }
 ```
