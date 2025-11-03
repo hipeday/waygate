@@ -6,7 +6,7 @@
 
 基于 reqwest 的`Retrofit 风格`声明式 HTTP 客户端。用 trait + 注解描述接口，过程宏生成具体调用代码。
 
-- 简单：用 `#[fresh(...)]` 标注 trait，一键生成 `XxxClient`
+- 简单：用 `#[request(...)]` 标注 trait，一键生成 `XxxClient`
 - 直观：方法上用 `#[get]` / `#[post]` 指定 HTTP 动作与路径
 - 安全：编译期展开，零运行时反射
 - 轻量：基于 reqwest，无侵入
