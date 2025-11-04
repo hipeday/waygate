@@ -22,9 +22,11 @@ documentation = "https://docs.rs/waygate"
 
 [workspace.dependencies.waygate]
 path = "waygate"
+version = "0.1.0"
 
 [workspace.dependencies.waygate-macros]
 path = "waygate-macros"
+version = "0.1.0"
 
 # Tokio async runtime
 [workspace.dependencies.tokio]
